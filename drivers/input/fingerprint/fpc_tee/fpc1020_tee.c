@@ -1019,7 +1019,7 @@ static inline int fpc1020_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(fpc1020->pinctrl_state); i++) {
+	for (i = 0; i < ARRAY_SIZE(pctl_names); i++) {
 		const char *n = pctl_names[i];
 		struct pinctrl_state *state =
 		    pinctrl_lookup_state(fpc1020->fingerprint_pinctrl, n);
