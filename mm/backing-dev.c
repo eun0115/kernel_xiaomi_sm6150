@@ -144,7 +144,7 @@ static ssize_t read_ahead_kb_store(struct device *dev,
 				  const char *buf, size_t count)
 {
 	struct backing_dev_info *bdi = dev_get_drvdata(dev);
-	unsigned long read_ahead_kb;
+	unsigned long read_ahead_kb = 128;
 	ssize_t ret;
 
 	ret = kstrtoul(buf, 10, &read_ahead_kb);

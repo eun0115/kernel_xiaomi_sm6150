@@ -7437,8 +7437,6 @@ static int select_idle_cpu(struct task_struct *p, struct sched_domain *sd, int t
 			return -1;
 		if (!cpumask_test_cpu(cpu, &p->cpus_allowed))
 			continue;
-		if (cpu_isolated(cpu))
-			continue;
 		if (idle_cpu(cpu) || sched_idle_cpu(cpu))
 			break;
 	}
@@ -7459,14 +7457,14 @@ static inline int __select_idle_sibling(struct task_struct *p, int prev, int tar
 	struct sched_domain *sd;
 	int i;
 
-	if (idle_cpu(target) && !cpu_isolated(target))
+	if (idle_cpu(target) || sched_idle_cpu(target))
 		return target;
 
 	/*
 	 * If the previous cpu is cache affine and idle, don't be stupid.
 	 */
-	if (prev != target && cpus_share_cache(prev, target) &&
-				idle_cpu(prev) && !cpu_isolated(prev))
+	if ((prev != target && cpus_share_cache(prev, target) &&
+				idle_cpu(prev)) || sched_idle_cpu(prev))
 		return prev;
 
 	sd = rcu_dereference(per_cpu(sd_llc, target));
