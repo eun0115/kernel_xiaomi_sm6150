@@ -51,7 +51,7 @@ static struct notifier_block sleepstate_pm_nb = {
 
 static irqreturn_t smp2p_sleepstate_handler(int irq, void *ctxt)
 {
-	__pm_wakeup_event(notify_ws, 200);
+	__pm_wakeup_event(notify_ws, 100);
 	return IRQ_HANDLED;
 }
 
@@ -92,6 +92,8 @@ static int smp2p_sleepstate_probe(struct platform_device *pdev)
 					"smp2p_sleepstate", dev);
 	if (ret) {
 		dev_err(dev, "fail to register smp2p threaded_irq=%d\n", irq);
+		__pm_relax(notify_ws);
+		
 		goto err;
 	}
 	return 0;
