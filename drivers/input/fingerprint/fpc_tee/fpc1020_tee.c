@@ -521,7 +521,7 @@ static inline ssize_t hw_reset_set(struct device *dev,
 	int rc;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
-	if (!strcmp(buf, "reset")) {
+	if (!strncmp(buf, "reset", strlen("reset"))) {
 		mutex_lock(&fpc1020->lock);
 		rc = hw_reset(fpc1020);
 		mutex_unlock(&fpc1020->lock);
@@ -662,9 +662,9 @@ static inline ssize_t device_prepare_set(struct device *dev,
 	int rc;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
-	if (!strcmp(buf, "enable"))
+	if (!strncmp(buf, "enable", strlen("enable")))
 		rc = device_prepare(fpc1020, true);
-	else if (!strcmp(buf, "disable"))
+	else if (!strncmp(buf, "disable", strlen("disable")))
 		rc = device_prepare(fpc1020, false);
 	else
 		return -EINVAL;
@@ -687,9 +687,9 @@ static inline ssize_t wakeup_enable_set(struct device *dev,
 
 	mutex_lock(&fpc1020->lock);
 /*
-	if (!strcmp(buf, "enable"))
+	if (!strncmp(buf, "enable", strlen("enable")))
 		atomic_set(&fpc1020->wakeup_enabled, 1);
-	else if (!strcmp(buf, "disable"))
+	else if (!strncmp(buf, "disable", strlen("disable")))
 		atomic_set(&fpc1020->wakeup_enabled, 0);
 	else
 		ret = -EINVAL;
@@ -712,7 +712,8 @@ static ssize_t handle_wakelock_cmd(struct device *dev,
 	ssize_t ret = count;
 
 	mutex_lock(&fpc1020->lock);
-	if (!strcmp(buf, RELEASE_WAKELOCK_W_V)) {
+	if (!strncmp(buf, RELEASE_WAKELOCK_W_V,
+		     min(count, strlen(RELEASE_WAKELOCK_W_V)))) {
 		if (fpc1020->nbr_irqs_received_counter_start ==
 		    fpc1020->nbr_irqs_received) {
 			__pm_relax(fpc1020->ttw_wl);
@@ -721,9 +722,12 @@ static ssize_t handle_wakelock_cmd(struct device *dev,
 				fpc1020->nbr_irqs_received_counter_start,
 				fpc1020->nbr_irqs_received);
 		}
-	} else if (!strcmp(buf, RELEASE_WAKELOCK)) {
+	} else if (!strncmp(buf, RELEASE_WAKELOCK, min(count,
+						       strlen
+						       (RELEASE_WAKELOCK)))) {
 		__pm_relax(fpc1020->ttw_wl);
-	} else if (!strcmp(buf, START_IRQS_RECEIVED_CNT)) {
+	} else if (!strncmp(buf, START_IRQS_RECEIVED_CNT,
+			    min(count, strlen(START_IRQS_RECEIVED_CNT)))) {
 		fpc1020->nbr_irqs_received_counter_start =
 		    fpc1020->nbr_irqs_received;
 	} else
@@ -772,9 +776,9 @@ static inline ssize_t fingerdown_wait_set(struct device *dev,
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
 	dev_dbg(fpc1020->dev, "%s -> %s\n", __func__, buf);
-	if (!strcmp(buf, "enable") && fpc1020->prepared)
+	if (!strncmp(buf, "enable", strlen("enable")) && fpc1020->prepared)
 		fpc1020->wait_finger_down = true;
-	else if (!strcmp(buf, "disable")
+	else if (!strncmp(buf, "disable", strlen("disable"))
 		 && fpc1020->prepared)
 		fpc1020->wait_finger_down = false;
 	else
@@ -803,10 +807,10 @@ static inline ssize_t irq_enable_set(struct device *dev,
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
 	mutex_lock(&fpc1020->lock);
-	if (!strcmp(buf, "1")) {
+	if (!strncmp(buf, "1", strlen("1"))) {
 		enable_irq(gpio_to_irq(fpc1020->irq_gpio));
 		pr_debug("fpc enable irq\n");
-	} else if (!strcmp(buf, "0")) {
+	} else if (!strncmp(buf, "0", strlen("0"))) {
 		disable_irq(gpio_to_irq(fpc1020->irq_gpio));
 		pr_debug("fpc disable irq\n");
 	}
@@ -827,9 +831,9 @@ static ssize_t power_cfg_set(struct device *dev,
 
 	mutex_lock(&fpc1020->lock);
 
-	if (!strcmp(buf, "1V8"))
+	if (!strncmp(buf, "1V8", strlen("1V8")))
 		power_cfg = 0;
-	else if (!strcmp(buf, "3V3"))
+	else if (!strncmp(buf, "3V3", strlen("3V3")))
 		power_cfg = 1;
 	else
 		rc = -EINVAL;
@@ -924,7 +928,7 @@ static inline int fpc1020_request_named_gpio(struct fpc1020_data *fpc1020,
 
 static void set_fingerprintd_nice(struct fpc1020_data *fpc1020, int nice)
 {
-	struct task_struct *p;
+    struct task_struct *p;
 
 	if (!fpc1020)
 		return;
@@ -934,12 +938,12 @@ static void set_fingerprintd_nice(struct fpc1020_data *fpc1020, int nice)
 		set_user_nice(p, nice);
 		return;
 	}
-
+	
 	read_lock(&tasklist_lock);
 	for_each_process(p) {
-		if (strstr(p->comm, "erprint"))
-			fpc1020->fingerprintd = p;
-			set_user_nice(p, nice);
+	if (strstr(p->comm, "erprint"))
+				fpc1020->fingerprintd = p;
+				set_user_nice(p, nice);
 	}
 	read_unlock(&tasklist_lock);
 }
@@ -1041,7 +1045,7 @@ static inline int fpc1020_probe(struct platform_device *pdev)
 
 	atomic_set(&fpc1020->wakeup_enabled, 1);
 
-	fpc1020->irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_PERF_AFFINE;
+	fpc1020->irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT;
 	fpc1020->irq_requested = false;
 	fpc1020->gpios_requested = false;
 	device_init_wakeup(dev, 1);
