@@ -711,13 +711,10 @@ LLVM_AR		:= llvm-ar
 LLVM_NM		:= llvm-nm
 
 # Set O3 optimization level for LTO
+LDFLAGS		+= -O3
 LDFLAGS		+= --plugin-opt=O3
-
-export LLVM_AR LLVM_NM
-
-# Set O3 optimization level for LTO
-LDFLAGS		+= --plugin-opt=O3
-
+LDFLAGS		+= --lto-O3
+LDFLAGS		+= --plugin-opt=-import-instr-limit=40
 endif
 
 # The arch Makefile can set ARCH_{CPP,A,C}FLAGS to override the default
@@ -727,7 +724,13 @@ ARCH_AFLAGS :=
 ARCH_CFLAGS :=
 include arch/$(SRCARCH)/Makefile
 
-CL_FLAGS += -O3 -mcpu=cortex-a76+crypto+crc -mtune=cortex-a76
+#Enable fast FMA optimizations
+KBUILD_CFLAGS   += -ffp-contract=fast
+#Enable MLGO for register allocation.
+KBUILD_CFLAGS   += -mllvm -regalloc-enable-advisor=release
+#Enable hot cold split optimization
+KBUILD_CFLAGS   += -mllvm -hot-cold-split=true
+KBUILD_CFLAGS	+= -O3 -mcpu=cortex-a76+crypto+crc -mtune=cortex-a76
 
 export CL_FLAGS
 
@@ -752,10 +755,6 @@ ifeq ($(cc-name),clang)
 KBUILD_CFLAGS	+= $(CL_FLAGS)
 KBUILD_AFLAGS   += $(CL_FLAGS)
 KBUILD_LDFLAGS  += $(CL_FLAGS)
-endif
-
-ifdef CONFIG_LTO_CLANG
-KBUILD_CFLAG	+= -fwhole-program-vtables
 endif
 
 ifdef CONFIG_GCC_GRAPHITE
@@ -884,6 +883,7 @@ KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 
 ifeq ($(ld-name),lld)
 LDFLAGS += --lto-O3 --strip-debug
+LDFLAGS += -mllvm -regalloc-enable-advisor=release
 endif
 
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
@@ -976,17 +976,19 @@ endif
 
 ifdef CONFIG_LTO_CLANG
 ifdef CONFIG_THINLTO
-lto-clang-flags	:= -flto=thin
+lto-clang-flags	:= -funified-lto
+lto-clang-flags	+= -flto=thin
 LDFLAGS		+= --thinlto-cache-dir=.thinlto-cache
 else
 lto-clang-flags	:= -flto
 endif
 lto-clang-flags += -fvisibility=default $(call cc-option, -fsplit-lto-unit)
+lto-clang-flags += -fwhole-program-vtables
 
 KBUILD_LDFLAGS_MODULE += -T scripts/module-lto.lds
 
 # allow disabling only clang LTO where needed
-DISABLE_LTO_CLANG := -fno-lto
+DISABLE_LTO_CLANG := -fno-lto -fno-whole-program-vtables
 export DISABLE_LTO_CLANG
 endif
 
